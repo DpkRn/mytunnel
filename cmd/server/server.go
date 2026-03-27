@@ -3,36 +3,46 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 )
+
+var clientConn net.Conn
 
 func main() {
 
 	//for tcp
-	listener, err := net.Listen("tcp", "localhost:9000")
+	go startTcpServer()
+	http.HandleFunc("/ping", handleHttp)
+	fmt.Println("Server listening on :3000")
+	http.ListenAndServe(":3000", nil)
+}
+func startTcpServer() {
+	listener, err := net.Listen("tcp", ":9000")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Server listening on :9000")
+	fmt.Println(" Tcp Server listening on :9000")
 	defer listener.Close()
-
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Accept error:", err)
-			continue
+			panic(err)
 		}
 		fmt.Println("Client connected:", conn.RemoteAddr())
-		go handleConnection(conn)
+		clientConn = conn
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func handleHttp(w http.ResponseWriter, r *http.Request) {
 	// defer conn.Close()
+	if clientConn == nil {
+		w.Write([]byte("no connections"))
+	}
+	reqData := fmt.Sprintf("method: %s, url: %s", r.Method, r.URL.String())
+	clientConn.Write([]byte(reqData))
 
-	//read from connection
-	buffer := make([]byte, 1024)
-	conn.Read(buffer)
-	fmt.Println("Received data:", string(buffer))
-	conn.Write([]byte("Message received"))
-	conn.Write([]byte("Message received part 2"))
+	buffer := make([]byte, 4096)
+	n, _ := clientConn.Read(buffer)
+
+	w.Write(buffer[:n])
 }
