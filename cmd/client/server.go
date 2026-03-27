@@ -31,7 +31,8 @@ func startTunneling(protocol, port string) {
 		return
 	}
 	fmt.Println("✅ Connected to tunnel server")
-	fmt.Println("🚀 Forwarding → http://localhost:3000")
+	fmt.Println("🚀 Forwarding → http://localhost:", port)
+	fmt.Println("🌐 Public URL → http://localhost:3000")
 	defer conn.Close()
 	for {
 		buffer := make([]byte, 4096)
