@@ -11,6 +11,7 @@ import (
 
 func main() {
 
+	fmt.Println(os.Args[0], os.Args[1])
 	if len(os.Args) < 3 {
 		fmt.Println(os.Args)
 		fmt.Println("Usage: mytunnel http <port>")
@@ -18,6 +19,8 @@ func main() {
 	}
 	protocol := os.Args[1]
 	port := os.Args[2]
+	// protocol := "http"
+	// port := "8080"
 	startTunneling(protocol, port)
 }
 func startTunneling(protocol, port string) {
@@ -25,15 +28,27 @@ func startTunneling(protocol, port string) {
 		fmt.Println("only http protocol supported")
 		return
 	}
+	fmt.Println("Connecting to server...")
 	conn, err := net.Dial("tcp", "localhost:9000")
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
 		return
 	}
-	fmt.Println("✅ Connected to tunnel server")
-	fmt.Println("🚀 Forwarding → http://localhost:", port)
-	fmt.Println("🌐 Public URL → http://localhost:3000")
-	defer conn.Close()
+	//read generatedsubdomain
+	publicUrl := make([]byte, 4096)
+	n, err := conn.Read(publicUrl)
+	if err != nil {
+		fmt.Println("Error reading from server:", err)
+		return
+	}
+
+	publicUrl = []byte(strings.TrimSpace(string(publicUrl[:n])))
+
+	fmt.Println("🌐 Public URL → http://" + string(publicUrl))
+
+	//make request on local server
+	localServer := "http://localhost:" + port
+
 	for {
 		buffer := make([]byte, 4096)
 		n, err := conn.Read(buffer)
@@ -42,14 +57,9 @@ func startTunneling(protocol, port string) {
 			return
 		}
 		request := string(buffer[:n])
-		fmt.Println("Request:", request)
-		parts := strings.Split(request, " ")
-		// method := parts[0]
+		parts := strings.Split(request, "|")
 		path := parts[1]
-
-		//make request on local server
-		localServer := "http://localhost:" + port
-
+		fmt.Println("path:", path)
 		resp, err := http.Get(localServer + path)
 		if err != nil {
 			fmt.Println("Error making request to local server:", err)
@@ -61,6 +71,7 @@ func startTunneling(protocol, port string) {
 			fmt.Println("Error reading response from local server:", err)
 			return
 		}
+		fmt.Println("Response:", string(body))
 		conn.Write([]byte(body))
 	}
 }
