@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -56,22 +58,53 @@ func startTunneling(protocol, port string) {
 			fmt.Println("Error reading from server:", err)
 			return
 		}
-		request := string(buffer[:n])
-		parts := strings.Split(request, "|")
-		path := parts[1]
-		fmt.Println("path:", path)
-		resp, err := http.Get(localServer + path)
+		request := buffer[:n]
+		// parts := strings.Split(request, "|")
+		// path := parts[1]
+		// fmt.Println("path:", path)
+		tunnelRequest := TunnelRequest{}
+		err = json.Unmarshal(request, &tunnelRequest)
+		if err != nil {
+			fmt.Println("Error unmarshalling request:", err)
+			return
+		}
+		fmt.Println("tunnelRequest:", tunnelRequest)
+		fmt.Println("body:", string(tunnelRequest.Body))
+		reqUrl, err := http.NewRequest(tunnelRequest.Method, localServer+tunnelRequest.Path, bytes.NewBuffer(tunnelRequest.Body))
+		reqUrl.Header = tunnelRequest.Headers
+		client := &http.Client{}
+		resp, err := client.Do(reqUrl)
 		if err != nil {
 			fmt.Println("Error making request to local server:", err)
 			return
 		}
 		defer resp.Body.Close()
+		respObj := TunnelResponse{
+			Status:  resp.StatusCode,
+			Headers: resp.Header,
+		}
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Println("Error reading response from local server:", err)
 			return
 		}
+		respObj.Body = body
 		fmt.Println("Response:", string(body))
-		conn.Write([]byte(body))
+
+		responseData, err := json.Marshal(respObj)
+		conn.Write(responseData)
 	}
+}
+
+type TunnelRequest struct {
+	Method  string
+	Path    string
+	Headers http.Header
+	Body    []byte
+}
+
+type TunnelResponse struct {
+	Status  int
+	Headers http.Header
+	Body    []byte
 }
