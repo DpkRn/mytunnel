@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -8,8 +9,20 @@ import (
 )
 
 func main() {
+
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: mytunnel http <port>")
+		return
+	}
+	command := os.Args[1]
 	port := os.Args[2]
-	client.Start(port)
+
+	switch command {
+	case "http":
+		client.Start(port)
+	default:
+		fmt.Println("Unknown command:", command)
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
