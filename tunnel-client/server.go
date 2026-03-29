@@ -70,6 +70,8 @@ func startTunneling(protocol, port string) {
 }
 
 func handleStream(stream net.Conn, port string) {
+
+	defer stream.Close()
 	localServer := "http://localhost:" + port
 
 	reader := bufio.NewReader(stream)
@@ -90,7 +92,13 @@ func handleStream(stream net.Conn, port string) {
 	fmt.Println("tunnelRequest:", tunnelRequest)
 	fmt.Println("body:", string(tunnelRequest.Body))
 	reqUrl, err := http.NewRequest(tunnelRequest.Method, localServer+tunnelRequest.Path, bytes.NewBuffer(tunnelRequest.Body))
-	reqUrl.Header = tunnelRequest.Headers
+
+	for k, v := range tunnelRequest.Headers {
+		for _, val := range v {
+			reqUrl.Header.Add(k, val)
+		}
+	}
+
 	client := &http.Client{}
 	resp, err := client.Do(reqUrl)
 	if err != nil {
