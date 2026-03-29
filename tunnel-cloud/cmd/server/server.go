@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,10 +10,12 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/hashicorp/yamux"
 )
 
 var (
-	clientConn = make(map[string]net.Conn)
+	clientConn = make(map[string]*yamux.Session)
 	mu         sync.RWMutex
 )
 
@@ -41,15 +44,21 @@ func startTcpServer() {
 }
 
 func handleClient(conn net.Conn) {
+
+	session, err := yamux.Server(conn, nil)
+	if err != nil {
+		conn.Close()
+		return
+	}
+
 	subdomain := generateID()
 
 	mu.Lock()
-	clientConn[subdomain] = conn
+	clientConn[subdomain] = session
 	mu.Unlock()
 
 	publicUrl := subdomain + ".localhost:3000"
-
-	_, err := conn.Write([]byte(publicUrl + "\n"))
+	_, err = conn.Write([]byte(publicUrl + "\n"))
 	if err != nil {
 		conn.Close()
 		return
@@ -71,7 +80,7 @@ func handleHttp(w http.ResponseWriter, r *http.Request) {
 	subdomain := strings.Split(host, ".")[0]
 	fmt.Println("host:", host)
 	mu.RLock()
-	conn, ok := clientConn[subdomain]
+	session, ok := clientConn[subdomain]
 	mu.RUnlock()
 
 	if !ok {
@@ -99,25 +108,29 @@ func handleHttp(w http.ResponseWriter, r *http.Request) {
 	}
 	// reqData := fmt.Sprintf("%s", requestData)
 	fmt.Println("requestData:", string(requestData))
-	_, err = conn.Write([]byte(requestData))
+
+	stream, err := session.Open()
+	if err != nil {
+		http.Error(w, "Stream error", 500)
+		return
+	}
+	defer stream.Close()
+	_, err = stream.Write([]byte(append(requestData, '\n')))
 	if err != nil {
 		http.Error(w, "Tunnel write failed", 500)
 		return
 	}
 
-	buffer := make([]byte, 4096)
+	reader := bufio.NewReader(stream)
+	responseByte, err := reader.ReadBytes('\n')
 
-	// ⏱ timeout (important)
-	// conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-
-	n, err := conn.Read(buffer)
 	if err != nil {
 		http.Error(w, "Tunnel timeout", 504)
 		return
 	}
 	//response
 	respObj := TunnelResponse{}
-	if err := json.Unmarshal(buffer[:n], &respObj); err != nil {
+	if err := json.Unmarshal(responseByte, &respObj); err != nil {
 		fmt.Println("Error while unmarshaling response")
 	}
 	for k, v := range respObj.Headers {
