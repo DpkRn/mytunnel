@@ -29,5 +29,20 @@ else
     rm -f mytunnel
     exit 1
 fi
-
-echo "✅ Installed! Run: mytunnel http 3000"
+echo ""
+echo "✅ Installed successfully!"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Quick Start"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  1. Start your local server (e.g. port 3000)"
+echo ""
+echo "  2. Run the tunnel:"
+echo "       mytunnel http 3000"
+echo ""
+echo "  3. You'll get a public URL like:"
+echo "       https://abc123.localhost:3000"
+echo "     Share it — all traffic is forwarded to your local server."
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
