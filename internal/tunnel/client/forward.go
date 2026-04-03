@@ -8,22 +8,21 @@ import (
 	"net"
 	"net/http"
 
-	protocol "github.com/DpkRn/devtunnel/internal/protocol"
+	"github.com/DpkRn/devtunnel/internal/protocol"
 	"github.com/hashicorp/yamux"
 )
 
-func acceptStreams(session *yamux.Session, port string) {
+func acceptStreams(session *yamux.Session, localHost, port string) {
 	for {
 		stream, err := session.Accept()
 		if err != nil {
 			return
 		}
-
-		go handle(stream, port)
+		go handleStream(stream, localHost, port)
 	}
 }
 
-func handle(stream net.Conn, port string) {
+func handleStream(stream net.Conn, localHost, port string) {
 	defer stream.Close()
 
 	reader := bufio.NewReader(stream)
@@ -34,7 +33,7 @@ func handle(stream net.Conn, port string) {
 
 	httpReq, _ := http.NewRequest(
 		req.Method,
-		"http://localhost:"+port+req.Path,
+		"http://"+localHost+":"+port+req.Path,
 		bytes.NewReader(req.Body),
 	)
 

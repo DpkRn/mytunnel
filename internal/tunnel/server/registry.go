@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
+// Registry maps tunnel subdomain ids to yamux sessions.
 type Registry struct {
 	mu      sync.RWMutex
 	clients map[string]*yamux.Session
