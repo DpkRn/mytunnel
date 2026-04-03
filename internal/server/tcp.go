@@ -9,20 +9,36 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-func StartTCP(reg *Registry) {
+type TCP interface {
+	StartTCP() error
+	HandleClient(conn net.Conn, reg *Registry)
+}
+
+type tcp struct {
+	Registry *Registry
+}
+
+func NewTCP(reg *Registry) TCP {
+	return &tcp{
+		Registry: reg,
+	}
+}
+
+func (t *tcp) StartTCP() error {
 	listener, err := net.Listen("tcp", ":9000")
 	if err != nil {
 		log.Fatalf("Failed to listen on port 9000: %v", err)
+		return err
 	}
 	fmt.Println("✅TCP Connection Listening on port 9000")
 
 	for {
 		conn, _ := listener.Accept()
-		go handleClient(conn, reg)
+		go t.HandleClient(conn, t.Registry)
 	}
 }
 
-func handleClient(conn net.Conn, reg *Registry) {
+func (t *tcp) HandleClient(conn net.Conn, reg *Registry) {
 	subdomain := pkg.GenerateID()
 	publicUrl := subdomain + ".localhost:3000\n"
 
@@ -36,7 +52,7 @@ func handleClient(conn net.Conn, reg *Registry) {
 		return
 	}
 
-	reg.Add(subdomain, session)
+	t.Registry.Add(subdomain, session)
 
 	fmt.Println("Client connected:", subdomain)
 }

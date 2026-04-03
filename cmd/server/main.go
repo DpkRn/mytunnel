@@ -12,10 +12,11 @@ import (
 
 func main() {
 	reg := server.NewRegistry()
+	tcp := server.NewTCP(reg)
+	go tcp.StartTCP()
+	handler := server.NewHandler(reg)
 
-	go server.StartTCP(reg)
-
-	http.HandleFunc("/", server.Handler(reg))
+	http.HandleFunc("/", handler.HandleRequest())
 	go func() {
 		err := http.ListenAndServe(":3000", nil)
 		if err != nil {
