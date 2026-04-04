@@ -5,7 +5,7 @@
 # syntax=docker/dockerfile:1
 
 # Match go.mod; bump if Docker Hub adds a newer tag (e.g. 1.25-alpine).
-ARG GO_VERSION=1.24
+ARG GO_VERSION=1.25
 FROM golang:${GO_VERSION}-alpine AS build
 
 WORKDIR /src
