@@ -19,5 +19,5 @@ func GenerateID() string {
 }
 
 func GenerateRequestID() string {
-	return uuid.New().String()
+	return "req_" + uuid.New().String()
 }

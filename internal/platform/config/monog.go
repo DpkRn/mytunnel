@@ -1,15 +1,9 @@
 package config
 
 import (
+	"log"
 	"os"
-
-	"github.com/joho/godotenv"
 )
-
-func init() {
-	// Load .env from current working directory (run the binary from repo root, or set env in Docker/systemd).
-	_ = godotenv.Load()
-}
 
 type MongoDBCfg struct {
 	URI       string
@@ -21,7 +15,7 @@ type MongoDBCfg struct {
 func (c config) MongoDB() MongoDBCfg {
 	uri := os.Getenv("MONGODB_URI")
 	if uri == "" {
-		uri = "mongodb://localhost:27017"
+		log.Fatalf("MONGODB_URI is not set")
 	}
 	db := os.Getenv("MONGODB_DB")
 	if db == "" {

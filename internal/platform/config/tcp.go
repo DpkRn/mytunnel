@@ -1,6 +1,10 @@
 package config
 
-import "os"
+import (
+	"os"
+
+	"github.com/joho/godotenv"
+)
 
 type TCPCfg struct {
 	ListenAddr       string
@@ -9,6 +13,7 @@ type TCPCfg struct {
 }
 
 func (c config) TCPServer() TCPCfg {
+	_ = godotenv.Load()
 	listenAddr := os.Getenv("TCP_LISTEN_ADDR")
 	publicURLScheme := os.Getenv("PUBLIC_URL_SCHEME")
 	publicHostSuffix := os.Getenv("PUBLIC_HOST_SUFFIX")

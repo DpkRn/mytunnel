@@ -29,17 +29,6 @@ func Handler(reg *Registry, mongoClient mongo.Client) http.HandlerFunc {
 			host = r.Host
 		}
 		// Do not put r.Body in the document: io.ReadCloser is not BSON-encodable and InsertOne would fail.
-		if _, err := mongoClient.InsertRequestLog(context.Background(), map[string]any{
-			"client_ip":       r.RemoteAddr,
-			"request_time":    time.Now(),
-			"request_type":    "http",
-			"request_uri":     r.RequestURI,
-			"request_method":  r.Method,
-			"request_headers": r.Header.Clone(),
-			"content_length":  r.ContentLength,
-		}); err != nil {
-			log.Printf("mongodb request log: %v", err)
-		}
 
 		fmt.Println("r.Host:", r.Host)
 
@@ -49,17 +38,18 @@ func Handler(reg *Registry, mongoClient mongo.Client) http.HandlerFunc {
 			return
 		}
 
-		subdomain := parts[0]
+		tunnelID := parts[0]
 
-		session, ok := reg.Get(subdomain)
+		session, ok := reg.Get(tunnelID)
 		if !ok {
 			http.Error(w, "Tunnel not found", http.StatusNotFound)
 			return
 		}
 
-		stream, err := session.Open()
+		stream, err := session.OpenStream()
+		streamID := stream.StreamID()
 		if err != nil {
-			reg.Remove(subdomain)
+			reg.Remove(tunnelID)
 			http.Error(w, "Tunnel session closed", http.StatusBadGateway)
 			return
 		}
@@ -82,7 +72,7 @@ func Handler(reg *Registry, mongoClient mongo.Client) http.HandlerFunc {
 			return
 		}
 		if _, err := stream.Write(append(data, '\n')); err != nil {
-			reg.Remove(subdomain)
+			reg.Remove(tunnelID)
 			http.Error(w, "Tunnel write failed", http.StatusBadGateway)
 			return
 		}
@@ -90,7 +80,7 @@ func Handler(reg *Registry, mongoClient mongo.Client) http.HandlerFunc {
 		reader := bufio.NewReader(stream)
 		respBytes, err := reader.ReadBytes('\n')
 		if err != nil || len(respBytes) == 0 {
-			reg.Remove(subdomain)
+			reg.Remove(tunnelID)
 			http.Error(w, "Tunnel closed before response", http.StatusBadGateway)
 			return
 		}
@@ -118,8 +108,9 @@ func Handler(reg *Registry, mongoClient mongo.Client) http.HandlerFunc {
 
 		go func() {
 			doc := map[string]any{
-				"_id":       reqID,
-				"tunnel_id": subdomain,
+				"stream_id":  streamID,
+				"request_id": reqID,
+				"tunnel_id":  tunnelID,
 
 				"request": map[string]any{
 					"method":  r.Method,
@@ -139,6 +130,12 @@ func Handler(reg *Registry, mongoClient mongo.Client) http.HandlerFunc {
 				"timing": map[string]any{
 					"duration_ms": time.Since(start).Milliseconds(),
 					"timestamp":   start.Format(time.RFC3339),
+				},
+				"host": map[string]any{
+					"client_ip":  r.RemoteAddr,
+					"referrer":   r.Referer(),
+					"user_agent": r.UserAgent(),
+					"host":       r.Host,
 				},
 
 				"created_at": time.Now(),

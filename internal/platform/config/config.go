@@ -1,6 +1,10 @@
 package config
 
-import "os"
+import (
+	"os"
+
+	"github.com/joho/godotenv"
+)
 
 type Config interface {
 	TierFunc() string
@@ -14,6 +18,7 @@ type config struct {
 }
 
 func NewConfig() Config {
+	_ = godotenv.Load()
 	return config{
 		Tier: os.Getenv("TIER"),
 	}

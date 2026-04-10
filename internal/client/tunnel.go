@@ -22,10 +22,18 @@ func tunnelControlAddr() string {
 	}
 }
 
-func Start(port string) {
-	conn, _ := net.Dial("tcp", tunnelControlAddr())
+func Start(port string) string {
+	conn, err := net.Dial("tcp", tunnelControlAddr())
+	if err != nil {
+		fmt.Println("Error connecting to tunnel control plane:", err)
+		return ""
+	}
 	fmt.Println("Connected to tunnel control plane:", conn.RemoteAddr())
-	session, _ := yamux.Client(conn, nil)
+	session, err := yamux.Client(conn, nil)
+	if err != nil {
+		fmt.Println("Error creating yamux session:", err)
+		return ""
+	}
 
 	go acceptStreams(session, port)
 
@@ -33,7 +41,7 @@ func Start(port string) {
 	n, err := conn.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading from connection:", err)
-		return
+		return ""
 	}
 	line := strings.TrimSpace(string(buf[:n]))
 	publicURL := line
@@ -53,4 +61,5 @@ func Start(port string) {
 	fmt.Println("  ║  🛑  Press Ctrl+C to stop                        ║")
 	fmt.Println("  ╚══════════════════════════════════════════════════╝")
 	fmt.Println()
+	return publicURL
 }
