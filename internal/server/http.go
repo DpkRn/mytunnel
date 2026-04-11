@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/DpkRn/devtunnel/internal/pkg"
@@ -137,4 +138,22 @@ func HandleTunnelRequest(
 			log.Println("Mongo error:", err)
 		}
 	}()
+}
+
+func serveControlPlane(w http.ResponseWriter, r *http.Request, reg *Registry, mongoClient mongo.Client) {
+	path := r.URL.Path
+	switch {
+	case path == "/health":
+		HealthHandler(w, r)
+	case path == "/logs":
+		GetLogsHandler(mongoClient).ServeHTTP(w, r)
+	case strings.HasPrefix(path, "/logs/"):
+		GetLogByIDHandler(mongoClient).ServeHTTP(w, r)
+	case strings.HasPrefix(path, "/replay/"):
+		ReplayHandler(reg, mongoClient).ServeHTTP(w, r)
+	case path == "/":
+		ServerHomeHandler(w, r)
+	default:
+		http.NotFound(w, r)
+	}
 }
