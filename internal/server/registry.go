@@ -17,21 +17,21 @@ func NewRegistry() *Registry {
 	}
 }
 
-func (r *Registry) Add(id string, s *yamux.Session) {
+func (r *Registry) Add(subhost string, session *yamux.Session) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.clients[id] = s
+	r.clients[subhost] = session
 }
 
-func (r *Registry) Get(id string) (*yamux.Session, bool) {
+func (r *Registry) Get(subhost string) (*yamux.Session, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	s, ok := r.clients[id]
+	s, ok := r.clients[subhost]
 	return s, ok
 }
 
-func (r *Registry) Remove(id string) {
+func (r *Registry) Remove(subhost string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.clients, id)
+	delete(r.clients, subhost)
 }

@@ -45,6 +45,8 @@ func HandleTunnelRequest(
 	streamID := stream.StreamID()
 	defer stream.Close()
 
+	// io.Copy(w, r.Body)
+
 	body, _ := io.ReadAll(r.Body)
 
 	req := protocol.TunnelRequest{
@@ -67,6 +69,7 @@ func HandleTunnelRequest(
 		return
 	}
 
+	//wait for response from tunnel
 	reader := bufio.NewReader(stream)
 	respBytes, err := reader.ReadBytes('\n')
 	if err != nil || len(respBytes) == 0 {

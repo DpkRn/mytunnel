@@ -19,8 +19,8 @@ import (
 type TunnelType string
 
 const (
-	TunnelTypeTCP TunnelType = "gotunnel"
-	TunnelTypeUDP TunnelType = "nodetunnel"
+	TunnelTypeGotunnel   TunnelType = "gotunnel"
+	TunnelTypeNodeTunnel TunnelType = "nodetunnel"
 )
 
 type ConnectionStatus string
